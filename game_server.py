@@ -11,7 +11,7 @@ from threading import Thread
 import json
 from datetime import datetime
 
-# ========== 配置区域 ==========
+# 配置区域
 CONFIG = {
     "MODEL_PATH": 'face_landmarker.task',
     "PLAYER_SIZE": 80,
@@ -22,7 +22,7 @@ CONFIG = {
     "VIDEO_HEIGHT": 480
 }
 
-# ========== 难度配置 ==========
+# 难度配置
 DIFFICULTY_CONFIGS = {
     "easy": {
         "name": "简单",
@@ -58,7 +58,7 @@ DIFFICULTY_CONFIGS = {
     }
 }
 
-# ========== 道具配置 ==========
+# 道具配置
 POWERUP_TYPES = {
     "shield": {"name": "护盾", "label": "SHIELD", "duration": 5, "color": (0, 255, 255)},
     "magnet": {"name": "磁铁", "label": "MAGNET", "duration": 5, "color": (255, 0, 255)},
@@ -66,7 +66,7 @@ POWERUP_TYPES = {
     "double": {"name": "双倍", "label": "DOUBLE", "duration": 5, "color": (255, 255, 0)}
 }
 
-# ========== 成就配置 ==========
+# 成就配置
 ACHIEVEMENTS = {
     "first_blood": {"name": "首次得分", "desc": "获得第一个金币", "icon": "🌟"},
     "combo_master": {"name": "连击大师", "desc": "达成10连击", "icon": "🔥"},
@@ -76,7 +76,7 @@ ACHIEVEMENTS = {
     "high_scorer": {"name": "高分玩家", "desc": "单局得分超过50", "icon": "👑"}
 }
 
-# ========== 图片素材路径 ==========
+# 图片素材路径
 IMG_OPEN_PATH = "open.png"
 IMG_CLOSE_PATH = "close.png"
 IMG_BEAN_PATH = "bean.png"
@@ -86,12 +86,12 @@ IMG_MAGNET_PATH = "magnet.png"
 IMG_SLOW_PATH = "slow.png"
 IMG_DOUBLE_PATH = "double.png"
 
-# ========== Flask + SocketIO 初始化 ==========
+# Flask + SocketIO 初始化
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'pacman_secret'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# ========== 游戏状态 ==========
+# 游戏状态
 game_state = {
     "running": False,
     "paused": False,
@@ -121,10 +121,10 @@ game_state = {
     }
 }
 
-# ========== 排行榜存储 ==========
+# 排行榜存储
 leaderboard = []
 
-# ========== MediaPipe 初始化 ==========
+# MediaPipe 初始化
 BaseOptions = mp.tasks.BaseOptions
 FaceLandmarker = mp.tasks.vision.FaceLandmarker
 FaceLandmarkerOptions = mp.tasks.vision.FaceLandmarkerOptions
@@ -136,9 +136,9 @@ def print_result(result, output_image, timestamp_ms):
     game_state["latest_result"] = result
 
 
-# ========== 工具函数 ==========
+# 工具函数
 def rotate_image(image, angle):
-    """旋转图像（保留透明通道）"""
+    """旋转图像"""
     if image is None:
         return None
     (h, w) = image.shape[:2]
@@ -225,7 +225,7 @@ def update_leaderboard(score, difficulty):
     leaderboard = leaderboard[:10]  # 只保留前10名
 
 
-# ========== 加载素材图片 ==========
+# 加载素材图片
 IMAGES = {
     "open": load_image_with_alpha(IMG_OPEN_PATH, CONFIG["PLAYER_SIZE"]),
     "close": load_image_with_alpha(IMG_CLOSE_PATH, CONFIG["PLAYER_SIZE"]),
@@ -238,15 +238,15 @@ IMAGES = {
 }
 
 
-# ========== 游戏主循环 ==========
+# 游戏主循环
 def game_loop():
-    """游戏主循环（后台线程运行）"""
+    """游戏主循环"""
     # 检查模型文件
     try:
         with open(CONFIG["MODEL_PATH"], 'r') as f:
             pass
     except FileNotFoundError:
-        print(f"❌ 错误: 找不到模型文件 {CONFIG['MODEL_PATH']}")
+        print(f"错误: 找不到模型文件 {CONFIG['MODEL_PATH']}")
         socketio.emit("error", {"message": f"找不到模型文件 {CONFIG['MODEL_PATH']}"})
         game_state["running"] = False
         return
@@ -269,35 +269,33 @@ def game_loop():
         game_state["cap"].set(cv2.CAP_PROP_FRAME_HEIGHT, CONFIG["VIDEO_HEIGHT"])
 
         if not game_state["cap"].isOpened():
-            print("❌ 错误: 无法打开摄像头")
+            print("错误: 无法打开摄像头")
             socketio.emit("error", {"message": "无法打开摄像头"})
             game_state["running"] = False
             return
 
-        # 3秒平滑倒计时
+        # 3秒倒计时
         countdown_start = time.time()
         while game_state["running"]:
             elapsed = time.time() - countdown_start
             if elapsed >= 3:
                 break
-            
+
             success, frame = game_state["cap"].read()
             if not success: break
-            
+
             frame = cv2.flip(frame, 1)
-            
+
             # 计算倒计时数字 (3 -> 2 -> 1)
             display_num = str(3 - int(elapsed))
-            
-            # 文字动效：稍微放大一点
-            font_scale = 4 + (elapsed % 1) * 0.5 
-            
-            cv2.putText(frame, display_num, (CONFIG["VIDEO_WIDTH"]//2-30, CONFIG["VIDEO_HEIGHT"]//2+30), 
-                       cv2.FONT_HERSHEY_DUPLEX, font_scale, (0, 255, 255), 4)
-                       
+
+            font_scale = 4 + (elapsed % 1) * 0.5
+
+            cv2.putText(frame, display_num, (CONFIG["VIDEO_WIDTH"] // 2 - 30, CONFIG["VIDEO_HEIGHT"] // 2 + 30),
+                        cv2.FONT_HERSHEY_DUPLEX, font_scale, (0, 255, 255), 4)
+
             _, buffer = cv2.imencode('.jpg', frame)
-            
-            # 保持空状态更新，以免前端报错
+
             socketio.emit("game_update", {
                 "frame": base64.b64encode(buffer).decode('utf-8'),
                 "score": 0,
@@ -305,7 +303,7 @@ def game_loop():
                 "combo": 0,
                 "powerups": {}
             })
-            time.sleep(0.03) # 保持约30FPS的流畅度
+            time.sleep(0.03)  # 保持约30FPS的流畅度
 
         # 倒计时结束后，正式开始计时
         game_state["start_time"] = time.time()
@@ -324,11 +322,11 @@ def game_loop():
 
             height, width = CONFIG["VIDEO_HEIGHT"], CONFIG["VIDEO_WIDTH"]
 
-            # ========== 1. 时间计算 ==========
+            # 1. 时间计算
             elapsed_time = int(time.time() - game_state["start_time"])
             game_state["time_left"] = max(0, diff_config["game_duration"] - elapsed_time)
 
-            # ========== 2. 游戏结束判定 ==========
+            # 2. 游戏结束判定
             if game_state["time_left"] <= 0 or game_state["score"] <= diff_config["lose_score"]:
                 game_state["running"] = False
 
@@ -356,7 +354,7 @@ def game_loop():
             # 镜像翻转
             frame = cv2.flip(frame, 1)
 
-            # ========== 3. 面部检测 ==========
+            # 3. 面部检测
             mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
             timestamp = int(time.time() * 1000)
             landmarker.detect_async(mp_image, timestamp)
@@ -393,8 +391,8 @@ def game_loop():
                     game_state["last_mouth_y"] = mouth_center["y"]
                     game_state["tilt_angle"] = tilt_angle
 
-            # ========== 4. 绘制玩家（吃豆人） ==========
-            # --- 状态特效渲染 ---
+            # 4. 绘制玩家（吃豆人）
+            # 状态特效渲染
 
             # 1. 减速 (Slow) - 全屏冰冻滤镜
             if "slow" in game_state["powerups"] and game_state["powerups"]["slow"] > 0:
@@ -402,7 +400,7 @@ def game_loop():
                 ice_overlay[:] = (255, 255, 0)  # 青蓝色 (BGR)
                 cv2.addWeighted(frame, 0.9, ice_overlay, 0.1, 0, frame)
                 # 边缘冰霜效果
-                cv2.rectangle(frame, (0,0), (width, height), (255, 200, 0), 10)
+                cv2.rectangle(frame, (0, 0), (width, height), (255, 200, 0), 10)
 
             # 2. 磁铁 (Magnet) - 磁力波纹
             if "magnet" in game_state["powerups"] and game_state["powerups"]["magnet"] > 0:
@@ -415,18 +413,18 @@ def game_loop():
             if "double" in game_state["powerups"] and game_state["powerups"]["double"] > 0:
                 # 在玩家位置画多层半透明黄色圆，模拟发光
                 glow_overlay = frame.copy()
-                cv2.circle(glow_overlay, (mouth_center["x"], mouth_center["y"]), 70, (0, 215, 255), -1) # 金色
+                cv2.circle(glow_overlay, (mouth_center["x"], mouth_center["y"]), 70, (0, 215, 255), -1)  # 金色
                 cv2.addWeighted(frame, 0.7, glow_overlay, 0.3, 0, frame)
                 # 头顶显示 x2
-                cv2.putText(frame, "x2", (mouth_center["x"] + 40, mouth_center["y"] - 40), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 215, 255), 3) # 加粗
-                cv2.putText(frame, "x2", (mouth_center["x"] + 40, mouth_center["y"] - 40), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 1)
+                cv2.putText(frame, "x2", (mouth_center["x"] + 40, mouth_center["y"] - 40),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 215, 255), 3)  # 加粗
+                cv2.putText(frame, "x2", (mouth_center["x"] + 40, mouth_center["y"] - 40),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 1)
 
             # 4. 护盾 (Shield) - 能量罩
             if "shield" in game_state["powerups"] and game_state["powerups"]["shield"] > 0:
                 shield_overlay = frame.copy()
-                cv2.circle(shield_overlay, (mouth_center["x"], mouth_center["y"]), 60, (255, 255, 0), -1) # 青色填充
+                cv2.circle(shield_overlay, (mouth_center["x"], mouth_center["y"]), 60, (255, 255, 0), -1)  # 青色填充
                 cv2.circle(shield_overlay, (mouth_center["x"], mouth_center["y"]), 60, (0, 255, 255), 3)  # 亮边框
                 cv2.addWeighted(frame, 0.6, shield_overlay, 0.4, 0, frame)
 
@@ -435,14 +433,14 @@ def game_loop():
             rotated_player = rotate_image(player_img, tilt_angle)
             overlay_image(frame, rotated_player, mouth_center["x"], mouth_center["y"])
 
-            # ========== 5. 生成/处理物品 ==========
+            # 5. 生成/处理物品
             current_fall_speed = diff_config["item_fall_speed"]
             if "slow" in game_state["powerups"] and game_state["powerups"]["slow"] > 0:
                 current_fall_speed = max(2, current_fall_speed // 2)
 
             if game_state["frame_count"] % (diff_config["spawn_interval"] // 2) == 0:  # 增加生成频率
                 rand_val = random.random()
-                # 20% 概率生成道具 (原 10%)
+                # 20% 概率生成道具
                 if rand_val < 0.2:
                     powerup_type = random.choice(list(POWERUP_TYPES.keys()))
                     game_state["game_objects"].append({
@@ -532,7 +530,7 @@ def game_loop():
                 if obj["type"] == "powerup":
                     powerup_type = obj["powerup_type"]
                     if powerup_type in IMAGES:
-                         overlay_image(frame, IMAGES[powerup_type], obj["x"], obj["y"])
+                        overlay_image(frame, IMAGES[powerup_type], obj["x"], obj["y"])
                     else:
                         powerup_config = POWERUP_TYPES[obj["powerup_type"]]
                         cv2.circle(frame, (obj["x"], obj["y"]), 20, powerup_config["color"], -1)
@@ -545,31 +543,23 @@ def game_loop():
 
             game_state["game_objects"] = new_objects
 
-            # ========== 6. 更新道具持续时间 ==========
+            # 6. 更新道具持续时间
             for powerup in list(game_state["powerups"].keys()):
                 if game_state["powerups"][powerup] > 0:
                     game_state["powerups"][powerup] -= 1
                     if game_state["powerups"][powerup] <= 0:
                         del game_state["powerups"][powerup]
 
-            # ========== 7. 受伤特效 ==========
+            # 7. 受伤特效
             if game_state["damage_timer"] > 0:
                 red_overlay = np.zeros_like(frame)
                 red_overlay[:] = (0, 0, 255)
                 cv2.addWeighted(frame, 0.7, red_overlay, 0.3, 0, frame)
                 game_state["damage_timer"] -= 1
 
-            # ========== 8. 绘制UI ==========
-            # UI 背景 (只保留特效提示，移除分数和时间)
-            # ui_overlay = frame.copy()
-            # cv2.rectangle(ui_overlay, (0, 0), (width, 100), (30, 30, 30), -1)
-            # cv2.addWeighted(ui_overlay, 0.6, frame, 0.4, 0, frame)
+            # 8. 绘制UI
 
-            # 移除冗余的分数和时间显示，让前端处理
-            # score_text = f"SCORE: {game_state['score']}"
-            # ...
-
-            # 道具状态显示 (保留)
+            # 道具状态显示
             powerup_y = 30
             for powerup_type, frames_left in game_state["powerups"].items():
                 seconds_left = frames_left // 30
@@ -578,7 +568,7 @@ def game_loop():
                 cv2.putText(frame, text, (20, powerup_y), cv2.FONT_HERSHEY_SIMPLEX, 0.8, powerup_config["color"], 2)
                 powerup_y += 35
 
-            # ========== 9. 推送数据到前端 ==========
+            # 9. 推送数据到前端
             _, buffer = cv2.imencode('.jpg', frame)
             frame_base64 = base64.b64encode(buffer).decode('utf-8')
 
@@ -598,7 +588,7 @@ def game_loop():
             game_state["cap"].release()
 
 
-# ========== SocketIO 事件监听 ==========
+# SocketIO 事件监听
 @socketio.on("start_game")
 def handle_start_game(data):
     """接收前端的开始游戏指令"""
@@ -663,7 +653,7 @@ def handle_get_leaderboard():
     emit("leaderboard_data", {"leaderboard": leaderboard})
 
 
-# ========== Flask 路由 ==========
+# Flask 路由
 @app.route("/")
 def index():
     """渲染前端页面"""
@@ -682,12 +672,12 @@ def get_achievements():
     return jsonify(ACHIEVEMENTS)
 
 
-# ========== 启动服务 ==========
+# 启动服务
 if __name__ == "__main__":
     print("=" * 50)
-    print("🎮 吃豆人游戏服务器启动中...")
+    print("吃豆人游戏服务器启动中...")
     print("=" * 50)
-    print("📍 本地访问: http://localhost:5000")
-    print("📍 局域网访问: http://你的IP:5000")
+    print("本地访问: http://localhost:5000")
+    print("局域网访问: http://你的IP:5000")
     print("=" * 50)
     socketio.run(app, host="0.0.0.0", port=5000, debug=True, allow_unsafe_werkzeug=True)
