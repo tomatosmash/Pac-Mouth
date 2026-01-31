@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎮 吃豆人</title>
+
+    <!-- Vue.js 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <!-- Socket.IO -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
+    <style>
+        * {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        /* 动态背景 */
+        .gradient-bg {
+            background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #4facfe);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* 浮动动画 */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .float-animation {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        /* 玻璃态效果 */
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* 游戏画布容器 */
+        .game-container {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 数据卡片 */
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05));
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 按钮样式 */
+        .game-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .game-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        /* 模态框动画 */
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+        }
+
+        /* 分数跳动效果 */
+        @keyframes scoreJump {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        .score-jump {
+            animation: scoreJump 0.3s ease;
+        }
+
+        /* 加载动画 */
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 粒子背景 */
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            pointer-events: none;
+        }
+
+        /* 进度条动画 */
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+
+        /* 标签页 */
+        .tab {
+            cursor: pointer;
+            padding: 12px 24px;
+            border-radius: 10px 10px 0 0;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* 滑块 */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.2);
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+
+        /* 成就徽章 */
+        .achievement-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            margin: 5px;
+            background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);
+            border-radius: 20px;
+            animation: tada 1s ease;
+        }
+
+        /* 连击特效 */
+        @keyframes comboFlash {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.1); }
+        }
+
+        .combo-flash {
+            animation: comboFlash 0.5s ease infinite;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .game-container {
+                max-width: 100%;
+            }
+        }
+    </style>
+
+    <!-- 音频元素 -->
+    <audio id="bgm" loop preload="auto">
+        <source src="https://www.bensound.com/bensound-music/bensound-littleidea.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="sfx-eat" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="sfx-bomb" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2001/2001-preview.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="sfx-powerup" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2018/2018-preview.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="sfx-achievement" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2019/2019-preview.mp3" type="audio/mpeg">
+    </audio>
+</head>
+<body class="gradient-bg min-h-screen">
+    {% raw %}
+    <div id="app">
+        <!-- 粒子背景 -->
+        <div class="fixed inset-0 overflow-hidden pointer-events-none">
+            <div v-for="n in 20" :key="n" class="particle"
+                 :style="particleStyle(n)"></div>
+        </div>
+
+        <!-- 主容器 -->
+        <div class="container mx-auto px-4 py-8 relative z-10">
+            <!-- 头部 -->
+            <header class="text-center mb-8 animate__animated animate__fadeInDown">
+                <h1 class="text-6xl font-black text-white mb-2 float-animation">
+                    <i class="fas fa-ghost mr-3"></i>
+                    吃豆人
+                    <i class="fas fa-ghost ml-3"></i>
+                </h1>
+                <p class="text-white text-xl font-light">
+                    Face Tracking Game
+                </p>
+
+                <!-- 顶部按钮组 -->
+                <div class="mt-4 flex justify-center gap-4 flex-wrap">
+                    <button @click="currentView = 'game'"
+                            :class="['px-6 py-2 rounded-full font-semibold transition-all',
+                                    currentView === 'game' ? 'bg-white text-purple-600' : 'bg-purple-600 text-white']">
+                        <i class="fas fa-gamepad mr-2"></i>游戏
+                    </button>
+                    <button @click="currentView = 'settings'"
+                            :class="['px-6 py-2 rounded-full font-semibold transition-all',
+                                    currentView === 'settings' ? 'bg-white text-purple-600' : 'bg-purple-600 text-white']">
+                        <i class="fas fa-cog mr-2"></i>设置
+                    </button>
+                    <button @click="showLeaderboard = true; loadLeaderboard()"
+                            class="px-6 py-2 rounded-full font-semibold bg-yellow-500 text-white hover:bg-yellow-600 transition-all">
+                        <i class="fas fa-trophy mr-2"></i>排行榜
+                    </button>
+                    <button @click="showAchievements = true"
+                            class="px-6 py-2 rounded-full font-semibold bg-green-500 text-white hover:bg-green-600 transition-all">
+                        <i class="fas fa-medal mr-2"></i>成就
+                    </button>
+                </div>
+            </header>
+
+            <!-- 状态提示 -->
+            <transition name="slide-fade">
+                <div v-if="statusMessage.show"
+                     :class="['mx-auto max-w-md mb-6 p-4 rounded-xl text-center font-semibold shadow-lg text-white animate__animated animate__bounceIn',
+                              statusMessage.type === 'error' ? 'bg-red-500' : statusMessage.type === 'success' ? 'bg-green-500' : 'bg-blue-500']">
+                    <i :class="['fas mr-2', statusMessage.type === 'error' ? 'fa-exclamation-circle' : 'fa-check-circle']"></i>
+                    <span v-html="statusMessage.text"></span>
+                </div>
+            </transition>
+
+            <!-- 游戏视图 -->
+            <div v-show="currentView === 'game'" class="max-w-6xl mx-auto">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- 左侧：统计面板 -->
+                    <div class="lg:col-span-1 space-y-4 animate__animated animate__fadeInLeft">
+                        <!-- 分数卡片 -->
+                        <div class="stat-card rounded-2xl p-6 text-white">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="text-lg font-semibold opacity-80">
+                                    <i class="fas fa-star mr-2 text-yellow-300"></i>
+                                    当前分数
+                                </h3>
+                            </div>
+                            <div class="text-5xl font-black" :class="{'score-jump': scoreChanged}">
+                                {{ gameData.score }}
+                            </div>
+                            <div class="mt-2 text-sm opacity-70">
+                                <span v-if="gameData.score >= 0">继续加油！</span>
+                                <span v-else>小心炸弹！</span>
+                            </div>
+                        </div>
+
+                        <!-- 连击卡片 -->
+                        <div class="stat-card rounded-2xl p-6 text-white" v-if="gameData.combo > 1">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="text-lg font-semibold opacity-80">
+                                    <i class="fas fa-fire mr-2 text-orange-400"></i>
+                                    连击
+                                </h3>
+                            </div>
+                            <div class="text-5xl font-black text-yellow-400 combo-flash">
+                                {{ gameData.combo }}x
+                            </div>
+                            <div class="mt-2 text-sm opacity-70">
+                                连击越高，分数越高！
+                            </div>
+                        </div>
+
+                        <!-- 道具状态 -->
+                        <div class="stat-card rounded-2xl p-6 text-white" v-if="Object.keys(gameData.powerups).length > 0">
+                            <h3 class="text-lg font-semibold mb-3">
+                                <i class="fas fa-magic mr-2 text-purple-300"></i>
+                                激活道具
+                            </h3>
+                            <div v-for="(time, type) in gameData.powerups" :key="type" class="mb-2">
+                                <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold"
+                                      :class="getPowerupClass(type)">
+                                    {{ getPowerupIcon(type) }} {{ getPowerupName(type) }}: {{ time }}s
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- 时间卡片 -->
+                        <div class="stat-card rounded-2xl p-6 text-white">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="text-lg font-semibold opacity-80">
+                                    <i class="fas fa-clock mr-2 text-blue-300"></i>
+                                    剩余时间
+                                </h3>
+                            </div>
+                            <div class="text-5xl font-black">
+                                {{ gameData.timeLeft }}
+                                <span class="text-2xl">秒</span>
+                            </div>
+                            <!-- 进度条 -->
+                            <div class="mt-4 bg-gray-700 rounded-full h-3 overflow-hidden">
+                                <div class="progress-bar h-full rounded-full transition-all"
+                                     :class="timeBarColor"
+                                     :style="{width: timeProgress + '%'}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 游戏说明 -->
+                        <div class="stat-card rounded-2xl p-6 text-white">
+                            <h3 class="text-lg font-semibold mb-3">
+                                <i class="fas fa-info-circle mr-2 text-cyan-300"></i>
+                                游戏说明
+                            </h3>
+                            <ul class="space-y-2 text-sm">
+                                <li class="flex items-start">
+                                    <i class="fas fa-check text-green-400 mr-2 mt-1"></i>
+                                    张嘴吃金币 <span class="text-yellow-300 font-bold">+1分</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-times text-red-400 mr-2 mt-1"></i>
+                                    误吃炸弹 <span class="text-red-300 font-bold">-5分</span>
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-magic text-purple-400 mr-2 mt-1"></i>
+                                    收集道具获得增益
+                                </li>
+                                <li class="flex items-start">
+                                    <i class="fas fa-fire text-orange-400 mr-2 mt-1"></i>
+                                    连续吃豆子触发连击
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- 最佳记录 -->
+                        <div class="stat-card rounded-2xl p-6 text-white">
+                            <h3 class="text-lg font-semibold mb-3">
+                                <i class="fas fa-trophy mr-2 text-yellow-400"></i>
+                                最佳记录
+                            </h3>
+                            <div class="text-3xl font-bold text-yellow-300">
+                                {{ bestScore }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 中间：游戏画面 -->
+                    <div class="lg:col-span-2 animate__animated animate__fadeInUp">
+                        <div class="game-container">
+                            <!-- 游戏画布 -->
+                            <div v-if="gameState === 'playing'" class="relative">
+                                <img :src="'data:image/jpeg;base64,' + gameFrame"
+                                     alt="游戏画面"
+                                     class="w-full h-auto rounded-2xl">
+
+                                <!-- 暂停提示 -->
+                                <div v-if="isPaused" class="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center rounded-2xl">
+                                    <div class="text-center text-white">
+                                        <i class="fas fa-pause text-8xl mb-4 animate__animated animate__pulse animate__infinite"></i>
+                                        <h3 class="text-4xl font-bold">游戏已暂停</h3>
+                                        <p class="mt-2">点击继续按钮恢复游戏</p>
+                                    </div>
+                                </div>
+
+                                <!-- 游戏中的悬浮提示 -->
+                                <div class="absolute top-4 left-4 bg-black bg-opacity-50 text-white px-4 py-2 rounded-full text-sm">
+                                    <i class="fas fa-video mr-2"></i>
+                                    摄像头已启动
+                                </div>
+                            </div>
+
+                            <!-- 待机画面 -->
+                            <div v-else class="glass rounded-2xl p-12 text-center text-white">
+                                <div class="mb-8">
+                                    <i class="fas fa-gamepad text-9xl opacity-50 float-animation"></i>
+                                </div>
+                                <h2 class="text-4xl font-bold mb-4">准备开始游戏</h2>
+                                <p class="text-lg opacity-80 mb-8">
+                                    选择难度并点击开始按钮
+                                </p>
+
+                                <!-- 难度选择 -->
+                                <div class="mb-8">
+                                    <h3 class="text-xl font-semibold mb-4">选择难度</h3>
+                                    <div class="grid grid-cols-2 gap-4 max-w-md mx-auto">
+                                        <button v-for="(config, key) in difficulties" :key="key"
+                                                @click="selectedDifficulty = key"
+                                                :class="['p-4 rounded-xl font-bold transition-all',
+                                                        selectedDifficulty === key ? 'bg-purple-600 ring-4 ring-yellow-400' : 'bg-purple-700 hover:bg-purple-600']">
+                                            <div class="text-2xl mb-2">
+                                                {{ getDifficultyIcon(key) }}
+                                            </div>
+                                            <div>{{ config.name }}</div>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- 控制按钮 -->
+                                <div class="flex justify-center gap-4">
+                                    <button @click="startGame"
+                                            :disabled="isLoading"
+                                            class="game-button px-8 py-4 rounded-full text-white font-bold text-lg shadow-xl flex items-center">
+                                        <div v-if="isLoading" class="loader mr-3"></div>
+                                        <i v-else class="fas fa-play mr-3"></i>
+                                        <span v-if="isLoading">启动中...</span>
+                                        <span v-else>开始游戏</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 游戏中的控制按钮 -->
+                        <div v-if="gameState === 'playing'" class="mt-6 flex justify-center gap-4 flex-wrap">
+                            <button @click="toggleMusic"
+                                    class="bg-blue-500 hover:bg-blue-600 px-6 py-3 rounded-full text-white font-semibold shadow-lg transition-all min-w-[140px]">
+                                <i :class="['fas mr-2', isMusicPlaying ? 'fa-volume-up' : 'fa-volume-mute']"></i>
+                                {{ isMusicPlaying ? '音乐开' : '音乐关' }}
+                            </button>
+                            <button @click="pauseGame"
+                                    class="bg-yellow-500 hover:bg-yellow-600 px-6 py-3 rounded-full text-white font-semibold shadow-lg transition-all min-w-[140px]">
+                                <i :class="['fas mr-2', isPaused ? 'fa-play' : 'fa-pause']"></i>
+                                {{ isPaused ? '继续' : '暂停' }}
+                            </button>
+                            <button @click="stopGame"
+                                    class="bg-red-500 hover:bg-red-600 px-6 py-3 rounded-full text-white font-semibold shadow-lg transition-all min-w-[140px]">
+                                <i class="fas fa-stop mr-2"></i>
+                                停止游戏
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 设置视图 -->
+            <div v-show="currentView === 'settings'" class="max-w-4xl mx-auto animate__animated animate__fadeIn">
+                <div class="glass rounded-3xl p-8 text-white">
+                    <h2 class="text-3xl font-bold mb-6">
+                        <i class="fas fa-cog mr-3"></i>游戏设置
+                    </h2>
+
+                    <div class="space-y-6">
+                        <!-- 灵敏度设置 -->
+                        <div>
+                            <label class="block text-lg font-semibold mb-2">
+                                <i class="fas fa-sliders-h mr-2"></i>
+                                嘴部识别灵敏度: {{ (settings.sensitivity * 100).toFixed(0) }}%
+                            </label>
+                            <input type="range" v-model.number="settings.sensitivity"
+                                   min="0.005" max="0.03" step="0.001"
+                                   @change="saveSettings">
+                            <p class="text-sm opacity-70 mt-1">调整嘴部张开的识别敏感度</p>
+                        </div>
+
+                        <!-- 音乐音量 -->
+                        <div>
+                            <label class="block text-lg font-semibold mb-2">
+                                <i class="fas fa-music mr-2"></i>
+                                背景音乐音量: {{ (settings.music_volume * 100).toFixed(0) }}%
+                            </label>
+                            <input type="range" v-model.number="settings.music_volume"
+                                   min="0" max="1" step="0.1"
+                                   @change="saveSettings">
+                        </div>
+
+                        <!-- 音效音量 -->
+                        <div>
+                            <label class="block text-lg font-semibold mb-2">
+                                <i class="fas fa-volume-up mr-2"></i>
+                                音效音量: {{ (settings.sfx_volume * 100).toFixed(0) }}%
+                            </label>
+                            <input type="range" v-model.number="settings.sfx_volume"
+                                   min="0" max="1" step="0.1"
+                                   @change="saveSettings">
+                        </div>
+
+                        <!-- 画质选择 -->
+                        <div>
+                            <label class="block text-lg font-semibold mb-2">
+                                <i class="fas fa-image mr-2"></i>
+                                画质设置
+                            </label>
+                            <select v-model="settings.quality" @change="saveSettings"
+                                    class="w-full p-3 rounded-lg bg-purple-700 text-white font-semibold">
+                                <option value="low">流畅 (低画质)</option>
+                                <option value="standard">标准 (推荐)</option>
+                                <option value="high">高清 (高性能要求)</option>
+                            </select>
+                        </div>
+
+                        <!-- 保存按钮 -->
+                        <div class="flex justify-end gap-4 mt-8">
+                            <button @click="resetSettings"
+                                    class="px-6 py-3 rounded-full bg-gray-600 hover:bg-gray-700 text-white font-semibold transition-all">
+                                <i class="fas fa-undo mr-2"></i>
+                                恢复默认
+                            </button>
+                            <button @click="saveSettings"
+                                    class="px-6 py-3 rounded-full game-button text-white font-semibold">
+                                <i class="fas fa-save mr-2"></i>
+                                保存设置
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 游戏结束模态框 -->
+        <transition name="fade">
+            <div v-if="showGameOver"
+                 class="fixed inset-0 modal-overlay flex items-center justify-center z-50 px-4"
+                 @click.self="closeGameOver">
+                <div class="glass rounded-3xl p-8 max-w-md w-full text-white text-center animate__animated animate__zoomIn">
+                    <div class="mb-6">
+                        <i class="fas fa-flag-checkered text-8xl text-yellow-400 animate__animated animate__tada"></i>
+                    </div>
+
+                    <h2 class="text-5xl font-black mb-4">游戏结束！</h2>
+
+                    <div class="bg-black bg-opacity-30 rounded-2xl p-6 mb-6">
+                        <div class="text-lg opacity-80 mb-2">最终得分</div>
+                        <div class="text-6xl font-black text-yellow-400">{{ finalScore }}</div>
+
+                        <div class="mt-4 grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <div class="opacity-70">最高连击</div>
+                                <div class="text-2xl font-bold">{{ gameStats.combo }}</div>
+                            </div>
+                            <div>
+                                <div class="opacity-70">金币数</div>
+                                <div class="text-2xl font-bold">{{ gameStats.beans }}</div>
+                            </div>
+                        </div>
+
+                        <div v-if="isNewRecord" class="mt-4 text-yellow-300 font-semibold animate__animated animate__flash">
+                            <i class="fas fa-crown mr-2"></i>
+                            新纪录！恭喜！
+                        </div>
+
+                        <!-- 解锁的成就 -->
+                        <div v-if="unlockedAchievements.length > 0" class="mt-4">
+                            <div class="text-sm opacity-70 mb-2">本局解锁成就</div>
+                            <div class="flex flex-wrap justify-center gap-2">
+                                <span v-for="ach in unlockedAchievements" :key="ach"
+                                      class="achievement-badge text-sm">
+                                    {{ getAchievementIcon(ach) }} {{ getAchievementName(ach) }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-4">
+                        <button @click="restartGame"
+                                class="flex-1 game-button px-6 py-4 rounded-full text-white font-bold text-lg shadow-xl">
+                            <i class="fas fa-redo mr-2"></i>
+                            再玩一次
+                        </button>
+                        <button @click="closeGameOver"
+                                class="flex-1 bg-gray-600 hover:bg-gray-700 px-6 py-4 rounded-full text-white font-bold text-lg shadow-xl transition-all">
+                            <i class="fas fa-times mr-2"></i>
+                            关闭
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <!-- 排行榜模态框 -->
+        <transition name="fade">
+            <div v-if="showLeaderboard"
+                 class="fixed inset-0 modal-overlay flex items-center justify-center z-50 px-4"
+                 @click.self="showLeaderboard = false">
+                <div class="glass rounded-3xl p-8 max-w-2xl w-full text-white animate__animated animate__zoomIn">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-black">
+                            <i class="fas fa-trophy mr-3 text-yellow-400"></i>
+                            排行榜
+                        </h2>
+                        <button @click="showLeaderboard = false"
+                                class="text-white hover:text-gray-300 transition-all">
+                            <i class="fas fa-times text-2xl"></i>
+                        </button>
+                    </div>
+
+                    <div v-if="leaderboard.length === 0" class="text-center py-12 opacity-70">
+                        <i class="fas fa-inbox text-6xl mb-4"></i>
+                        <p class="text-lg">暂无记录，快来成为第一名吧！</p>
+                    </div>
+
+                    <div v-else class="space-y-3 max-h-96 overflow-y-auto">
+                        <div v-for="(entry, index) in leaderboard" :key="index"
+                             class="bg-black bg-opacity-30 rounded-xl p-4 flex items-center gap-4 hover:bg-opacity-40 transition-all">
+                            <!-- 排名 -->
+                            <div class="text-3xl font-black w-12 text-center">
+                                <span v-if="index === 0" class="text-yellow-400">🥇</span>
+                                <span v-else-if="index === 1" class="text-gray-300">🥈</span>
+                                <span v-else-if="index === 2" class="text-orange-400">🥉</span>
+                                <span v-else>{{ index + 1 }}</span>
+                            </div>
+
+                            <!-- 信息 -->
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-2xl font-bold">{{ entry.score }}</span>
+                                    <span class="text-sm opacity-70">分</span>
+                                    <span class="px-2 py-1 rounded text-xs font-semibold bg-purple-600">
+                                        {{ entry.difficulty }}
+                                    </span>
+                                </div>
+                                <div class="text-sm opacity-70 flex gap-4">
+                                    <span>
+                                        <i class="fas fa-fire mr-1"></i>
+                                        连击 {{ entry.combo }}
+                                    </span>
+                                    <span>
+                                        <i class="fas fa-coins mr-1"></i>
+                                        金币 {{ entry.beans }}
+                                    </span>
+                                    <span>
+                                        <i class="fas fa-clock mr-1"></i>
+                                        {{ formatDate(entry.date) }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <!-- 成就模态框 -->
+        <transition name="fade">
+            <div v-if="showAchievements"
+                 class="fixed inset-0 modal-overlay flex items-center justify-center z-50 px-4"
+                 @click.self="showAchievements = false">
+                <div class="glass rounded-3xl p-8 max-w-3xl w-full text-white animate__animated animate__zoomIn">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-black">
+                            <i class="fas fa-medal mr-3 text-green-400"></i>
+                            成就系统
+                        </h2>
+                        <button @click="showAchievements = false"
+                                class="text-white hover:text-gray-300 transition-all">
+                            <i class="fas fa-times text-2xl"></i>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div v-for="(achievement, key) in achievements" :key="key"
+                             :class="['bg-black bg-opacity-30 rounded-xl p-4 transition-all',
+                                     unlockedAchievements.includes(key) ? 'ring-2 ring-yellow-400' : 'opacity-50']">
+                            <div class="flex items-start gap-3">
+                                <div class="text-4xl">
+                                    {{ achievement.icon }}
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="text-lg font-bold mb-1">
+                                        {{ achievement.name }}
+                                        <i v-if="unlockedAchievements.includes(key)"
+                                           class="fas fa-check-circle text-green-400 ml-2"></i>
+                                    </h3>
+                                    <p class="text-sm opacity-70">{{ achievement.desc }}</p>
+                                    <div v-if="unlockedAchievements.includes(key)"
+                                         class="mt-2 text-xs text-green-400 font-semibold">
+                                        <i class="fas fa-unlock mr-1"></i>已解锁
+                                    </div>
+                                    <div v-else class="mt-2 text-xs text-gray-400">
+                                        <i class="fas fa-lock mr-1"></i>未解锁
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 text-center">
+                        <div class="text-lg font-semibold">
+                            进度: {{ unlockedAchievements.length }} / {{ Object.keys(achievements).length }}
+                        </div>
+                        <div class="mt-2 bg-gray-700 rounded-full h-4 overflow-hidden">
+                            <div class="bg-gradient-to-r from-green-400 to-blue-500 h-full transition-all"
+                                 :style="{width: (unlockedAchievements.length / Object.keys(achievements).length * 100) + '%'}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <!-- 成就解锁通知 -->
+        <transition name="slide-fade">
+            <div v-if="achievementNotification.show"
+                 class="fixed top-20 right-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-white p-4 rounded-xl shadow-2xl z-50 animate__animated animate__bounceInRight max-w-sm">
+                <div class="flex items-center gap-3">
+                    <div class="text-4xl">
+                        {{ achievementNotification.icon }}
+                    </div>
+                    <div>
+                        <div class="font-bold text-lg">成就解锁！</div>
+                        <div class="text-sm">{{ achievementNotification.name }}</div>
+                        <div class="text-xs opacity-80">{{ achievementNotification.desc }}</div>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <!-- 道具收集通知 -->
+        <transition name="slide-fade">
+            <div v-if="powerupNotification.show"
+                 class="fixed top-20 left-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white p-4 rounded-xl shadow-2xl z-50 animate__animated animate__bounceInLeft">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-magic text-3xl"></i>
+                    <div>
+                        <div class="font-bold">道具获得！</div>
+                        <div class="text-sm">{{ powerupNotification.name }}</div>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+        <!-- 页脚 -->
+        <footer class="text-center text-white mt-12 pb-6 opacity-70">
+            <p>
+                <i class="fas fa-heart text-red-400 animate__animated animate__heartBeat animate__infinite"></i>
+                Made By 蒋晟源，胡宇翔，王振宇，叶阳光
+                <i class="fas fa-heart text-red-400 animate__animated animate__heartBeat animate__infinite"></i>
+            </p>
+            <p class="text-sm mt-2">Powered by MediaPipe, Flask & Socket.IO</p>
+        </footer>
+    </div>
+    {% endraw %}
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    audioElements: {
+                        bgm: null,
+                        eat: null,
+                        bomb: null,
+                        powerup: null,
+                        achievement: null
+                    },
+                    isMusicPlaying: false,
+                    socket: null,
+                    currentView: 'game', // game, settings
+                    gameState: 'idle', // idle, playing
+                    isPaused: false,
+                    gameFrame: '',
+                    gameData: {
+                        score: 0,
+                        timeLeft: 30,
+                        combo: 0,
+                        powerups: {}
+                    },
+                    gameStats: {
+                        combo: 0,
+                        beans: 0
+                    },
+                    showGameOver: false,
+                    showLeaderboard: false,
+                    showAchievements: false,
+                    finalScore: 0,
+                    bestScore: localStorage.getItem('bestScore') || 0,
+                    isNewRecord: false,
+                    statusMessage: {
+                        show: false,
+                        text: '',
+                        type: 'info'
+                    },
+                    achievementNotification: {
+                        show: false,
+                        icon: '',
+                        name: '',
+                        desc: ''
+                    },
+                    powerupNotification: {
+                        show: false,
+                        name: ''
+                    },
+                    isLoading: false,
+                    scoreChanged: false,
+                    selectedDifficulty: 'normal',
+                    difficulties: {},
+                    achievements: {},
+                    unlockedAchievements: JSON.parse(localStorage.getItem('unlockedAchievements') || '[]'),
+                    leaderboard: [],
+
+                    settings: {
+                        sensitivity: 0.01,
+                        music_volume: 0.5,
+                        sfx_volume: 0.7,
+                        quality: 'standard'
+                    }
+                }
+            },
+            computed: {
+                timeProgress() {
+                    if (!this.difficulties[this.selectedDifficulty]) return 0;
+                    const duration = this.difficulties[this.selectedDifficulty].game_duration || 30;
+                    return (this.gameData.timeLeft / duration) * 100;
+                },
+                timeBarColor() {
+                    const progress = this.timeProgress;
+                    if (progress > 60) return 'bg-green-500';
+                    if (progress > 30) return 'bg-yellow-500';
+                    return 'bg-red-500';
+                }
+            },
+            async mounted() {
+                this.initSocket();
+                this.createParticles();
+                await this.loadDifficulties();
+                await this.loadAchievements();
+                this.loadSettings();
+                this.initAudio();
+            },
+            methods: {
+                initSocket() {
+                    this.socket = io();
+
+                    this.socket.on('connect', () => {
+                        console.log('✅ 已连接到服务器');
+                    });
+
+                    this.socket.on('game_started', (data) => {
+                        this.gameState = 'playing';
+                        this.isPaused = false;
+                        this.isLoading = false;
+                        this.showStatus(`游戏已开始！难度：${data.difficulty}`, 'success');
+                        this.playBGM();
+                    });
+
+                    this.socket.on('game_update', (data) => {
+                        this.gameFrame = data.frame;
+
+                        // 检测分数变化（吃到豆子）
+                        if (data.score > this.gameData.score) {
+                            this.scoreChanged = true;
+                            this.playSFX('eat');
+                            setTimeout(() => this.scoreChanged = false, 300);
+                        }
+
+                        // 检测分数减少（吃到炸弹）
+                        if (data.score < this.gameData.score) {
+                            this.playSFX('bomb');
+                        }
+
+                        this.gameData.score = data.score;
+                        this.gameData.timeLeft = data.time_left;
+                        this.gameData.combo = data.combo;
+                        this.gameData.powerups = data.powerups || {};
+                    });
+
+                    this.socket.on('game_paused', (data) => {
+                        this.isPaused = data.paused;
+                    });
+
+                    this.socket.on('game_over', (data) => {
+                        this.gameState = 'idle';
+                        this.finalScore = data.score;
+                        this.gameStats.combo = data.combo;
+                        this.gameStats.beans = data.beans;
+                        this.showGameOver = true;
+                        this.pauseBGM();
+
+                        // 更新解锁的成就
+                        if (data.achievements) {
+                            data.achievements.forEach(ach => {
+                                if (!this.unlockedAchievements.includes(ach)) {
+                                    this.unlockedAchievements.push(ach);
+                                }
+                            });
+                            localStorage.setItem('unlockedAchievements', JSON.stringify(this.unlockedAchievements));
+                        }
+
+                        // 检查是否刷新记录
+                        if (data.score > this.bestScore) {
+                            this.bestScore = data.score;
+                            localStorage.setItem('bestScore', data.score);
+                            this.isNewRecord = true;
+                        } else {
+                            this.isNewRecord = false;
+                        }
+                    });
+
+                    this.socket.on('achievement_unlocked', (data) => {
+                        this.showAchievementNotification(data);
+                    });
+
+                    this.socket.on('powerup_collected', (data) => {
+                        this.showPowerupNotification(data);
+                    });
+
+                    this.socket.on('error', (data) => {
+                        this.showStatus('错误: ' + data.message, 'error');
+                        this.isLoading = false;
+                    });
+
+                    this.socket.on('disconnect', () => {
+                        console.log('❌ 与服务器断开连接');
+                        this.showStatus('与服务器断开连接', 'error');
+                    });
+                },
+
+                initAudio() {
+                    this.audioElements.bgm = document.getElementById('bgm');
+                    this.audioElements.eat = document.getElementById('sfx-eat');
+                    this.audioElements.bomb = document.getElementById('sfx-bomb');
+                    this.audioElements.powerup = document.getElementById('sfx-powerup');
+                    this.audioElements.achievement = document.getElementById('sfx-achievement');
+
+                    this.updateAudioVolume();
+                },
+
+                updateAudioVolume() {
+                    if (this.audioElements.bgm) {
+                        this.audioElements.bgm.volume = this.settings.music_volume;
+                    }
+                    Object.keys(this.audioElements).forEach(key => {
+                        if (key !== 'bgm' && this.audioElements[key]) {
+                            this.audioElements[key].volume = this.settings.sfx_volume;
+                        }
+                    });
+                },
+
+                toggleMusic() {
+                    if (this.isMusicPlaying) {
+                        this.pauseBGM();
+                    } else {
+                        this.playBGM();
+                    }
+                },
+
+                playBGM() {
+                    if (this.audioElements.bgm && this.settings.music_volume > 0) {
+                        this.audioElements.bgm.play().catch(e => console.log('音乐播放失败:', e));
+                        this.isMusicPlaying = true;
+                    }
+                },
+
+                pauseBGM() {
+                    if (this.audioElements.bgm) {
+                        this.audioElements.bgm.pause();
+                        this.isMusicPlaying = false;
+                    }
+                },
+
+                playSFX(type) {
+                    const audio = this.audioElements[type];
+                    if (audio && this.settings.sfx_volume > 0) {
+                        audio.currentTime = 0;
+                        audio.play().catch(e => console.log('音效播放失败:', e));
+                    }
+                },
+
+                async loadDifficulties() {
+                    try {
+                        const response = await fetch('/api/difficulties');
+                        this.difficulties = await response.json();
+                    } catch (error) {
+                        console.error('加载难度失败:', error);
+                    }
+                },
+
+                async loadAchievements() {
+                    try {
+                        const response = await fetch('/api/achievements');
+                        this.achievements = await response.json();
+                    } catch (error) {
+                        console.error('加载成就失败:', error);
+                    }
+                },
+
+                loadLeaderboard() {
+                    this.socket.emit('get_leaderboard');
+                    this.socket.on('leaderboard_data', (data) => {
+                        this.leaderboard = data.leaderboard;
+                    });
+                },
+
+                loadSettings() {
+                    const saved = localStorage.getItem('gameSettings');
+                    if (saved) {
+                        this.settings = JSON.parse(saved);
+                    }
+                },
+
+                saveSettings() {
+                    localStorage.setItem('gameSettings', JSON.stringify(this.settings));
+                    this.socket.emit('update_settings', this.settings);
+                    this.updateAudioVolume();
+                    this.showStatus('设置已保存', 'success');
+                },
+
+                resetSettings() {
+                    this.settings = {
+                        sensitivity: 0.01,
+                        music_volume: 0.5,
+                        sfx_volume: 0.7,
+                        quality: 'standard'
+                    };
+                    this.saveSettings();
+                },
+
+                startGame() {
+                    this.isLoading = true;
+                    this.socket.emit('start_game', { difficulty: this.selectedDifficulty });
+                },
+
+                pauseGame() {
+                    this.socket.emit('pause_game');
+                },
+
+                stopGame() {
+                    this.socket.emit('stop_game');
+                    this.gameState = 'idle';
+                },
+
+                restartGame() {
+                    this.showGameOver = false;
+                    this.socket.emit('restart_game', { difficulty: this.selectedDifficulty });
+                    this.isLoading = true;
+                },
+
+                closeGameOver() {
+                    this.showGameOver = false;
+                },
+
+                showStatus(text, type = 'info') {
+                    this.statusMessage = { show: true, text, type };
+                    setTimeout(() => {
+                        this.statusMessage.show = false;
+                    }, 3000);
+                },
+
+                showAchievementNotification(data) {
+                    this.achievementNotification = {
+                        show: true,
+                        icon: data.icon,
+                        name: data.name,
+                        desc: data.desc
+                    };
+                    setTimeout(() => {
+                        this.achievementNotification.show = false;
+                    }, 5000);
+                },
+
+                showPowerupNotification(data) {
+                    this.powerupNotification = {
+                        show: true,
+                        name: data.name
+                    };
+                    setTimeout(() => {
+                        this.powerupNotification.show = false;
+                    }, 3000);
+                },
+
+                particleStyle(n) {
+                    const size = Math.random() * 10 + 5;
+                    const x = Math.random() * 100;
+                    const y = Math.random() * 100;
+                    const duration = Math.random() * 10 + 5;
+                    const delay = Math.random() * 5;
+
+                    return {
+                        width: size + 'px',
+                        height: size + 'px',
+                        left: x + '%',
+                        top: y + '%',
+                        animation: `float ${duration}s ease-in-out ${delay}s infinite`
+                    };
+                },
+
+                createParticles() {
+                    // 粒子已通过 v-for 创建
+                },
+
+                getDifficultyIcon(key) {
+                    const icons = {
+                        easy: '🟢',
+                        normal: '🟡',
+                        hard: '🟠',
+                        hell: '🔴'
+                    };
+                    return icons[key] || '⚪';
+                },
+
+                getPowerupIcon(type) {
+                    const icons = {
+                        shield: '🛡️',
+                        magnet: '🧲',
+                        slow: '🐌',
+                        double: '💰'
+                    };
+                    return icons[type] || '✨';
+                },
+
+                getPowerupName(type) {
+                    const names = {
+                        shield: '护盾',
+                        magnet: '磁铁',
+                        slow: '减速',
+                        double: '双倍'
+                    };
+                    return names[type] || type;
+                },
+
+                getPowerupClass(type) {
+                    const classes = {
+                        shield: 'bg-cyan-500',
+                        magnet: 'bg-purple-500',
+                        slow: 'bg-green-500',
+                        double: 'bg-yellow-500'
+                    };
+                    return classes[type] || 'bg-gray-500';
+                },
+
+                getAchievementIcon(key) {
+                    return this.achievements[key]?.icon || '🏆';
+                },
+
+                getAchievementName(key) {
+                    return this.achievements[key]?.name || key;
+                },
+
+                formatDate(dateString) {
+                    const date = new Date(dateString);
+                    const now = new Date();
+                    const diff = now - date;
+                    const hours = Math.floor(diff / 3600000);
+
+                    if (hours < 1) return '刚刚';
+                    if (hours < 24) return `${hours}小时前`;
+                    return date.toLocaleDateString('zh-CN');
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
